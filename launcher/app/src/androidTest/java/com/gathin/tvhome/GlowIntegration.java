@@ -33,7 +33,17 @@ public class GlowIntegration extends Instrumentation {
             prefs.edit().putString("favorites","[\"com.test.one\",\"com.test.two\"]").commit();
             Config cfg = Config.load(c);
             require(cfg.columns == 2 && cfg.dockApps.size() == 2, "Favorite count controls dock");
-            result.putString("stream", "PASS: backup round trip, invalid backup atomicity, duplicate rejection, rotation, pinning, dock count\n");
+            final android.widget.ImageView[] image = new android.widget.ImageView[1];
+            runOnMainSync(() -> {
+                image[0] = new android.widget.ImageView(c);
+                WallpaperGallery.fade(c,image[0],"porsche",false);
+                WallpaperGallery.fade(c,image[0],"scenic",true);
+                require(image[0].getDrawable() instanceof android.graphics.drawable.TransitionDrawable,"Wallpaper crossfade");
+            });
+            JSONObject legacy = new JSONObject(initial.toString()); legacy.remove("idle_minutes");
+            GlowPrefs.restore(c,legacy.toString());
+            require(GlowPrefs.get(c).getInt("idle_minutes",0)==5,"Legacy backup screensaver default");
+            result.putString("stream", "PASS: backup integrity, rotation, pinning, dock count, wallpaper crossfade, legacy backup compatibility\n");
         } catch (Throwable error) {
             code = 0; result.putString("stream", "FAIL: " + error.toString());
         } finally {

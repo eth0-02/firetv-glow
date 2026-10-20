@@ -51,6 +51,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
 
         /** Called for a D-pad direction key on a tile. Return true when handled (focus stays put). */
         boolean onTileVerticalKey(int position, int keyCode);
+        void onTileLongPressed(String pkg, String label);
     }
 
     static final class Entry {
@@ -224,6 +225,12 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         cardLp.width = w;
         cardLp.height = h;
         card.setLayoutParams(cardLp);
+        android.widget.FrameLayout.LayoutParams iconLp = (android.widget.FrameLayout.LayoutParams) v.findViewById(R.id.icon).getLayoutParams();
+        iconLp.width = iconLp.height = Math.round(h * 0.48f);
+        iconLp.bottomMargin = Math.round(h * 0.23f);
+        v.findViewById(R.id.icon).setLayoutParams(iconLp);
+        ((ImageView) v.findViewById(R.id.icon)).setScaleType(ImageView.ScaleType.FIT_CENTER);
+        ((TextView) v.findViewById(R.id.label)).setTextSize(Math.min(13f, h / density * 0.16f));
         View name = v.findViewById(R.id.name);
         ViewGroup.MarginLayoutParams nameLp = (ViewGroup.MarginLayoutParams) name.getLayoutParams();
         nameLp.width = w;
@@ -245,7 +252,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         h.card.setTranslationZ(focused && advancedEffects ? 8f * ctx.getResources().getDisplayMetrics().density : 0f);
         h.banner.setScaleX(focused && advancedEffects ? 1.035f : 1f);
         h.banner.setScaleY(focused && advancedEffects ? 1.035f : 1f);
-        if (e.banner != null) {
+        if (e.kind == Entry.CARD && e.banner != null) {
             h.banner.setImageDrawable(e.banner);
             h.banner.setVisibility(View.VISIBLE);
             h.icon.setVisibility(View.GONE);
@@ -260,12 +267,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         }
         h.card.setOnClickListener(v -> launch(e));
         h.card.setOnLongClickListener(v -> {
-            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            try {
-                ctx.startActivity(i);
-            } catch (ActivityNotFoundException ignored) {
-            }
+            if (listener != null) listener.onTileLongPressed(e.pkg, e.label);
             return true;
         });
     }
@@ -410,7 +412,28 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             });
             card.setClipToOutline(true);
 
+            final boolean[] held = {false}, longHandled = {false};
+            Runnable hold = () -> {
+                if (held[0] && card.hasFocus() && !longHandled[0]) {
+                    longHandled[0] = true;
+                    card.performLongClick();
+                }
+            };
             card.setOnKeyListener((view, keyCode, event) -> {
+                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
+                    if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                        if (event.getRepeatCount() == 0) {
+                            held[0] = true; longHandled[0] = false;
+                            view.postDelayed(hold, android.view.ViewConfiguration.getLongPressTimeout());
+                        } else if (event.isLongPress()) hold.run();
+                    } else if (event.getAction() == KeyEvent.ACTION_UP) {
+                        view.removeCallbacks(hold);
+                        boolean click = held[0] && !longHandled[0] && !event.isCanceled();
+                        held[0] = false;
+                        if (click) view.performClick();
+                    }
+                    return true;
+                }
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
                 if (keyCode != KeyEvent.KEYCODE_DPAD_UP && keyCode != KeyEvent.KEYCODE_DPAD_DOWN
                         && keyCode != KeyEvent.KEYCODE_DPAD_LEFT && keyCode != KeyEvent.KEYCODE_DPAD_RIGHT) return false;
@@ -419,6 +442,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
             });
 
             card.setOnFocusChangeListener((view, focused) -> {
+                if (!focused) { held[0] = false; view.removeCallbacks(hold); }
                 view.animate().cancel();
                 banner.animate().cancel();
                 name.animate().cancel();

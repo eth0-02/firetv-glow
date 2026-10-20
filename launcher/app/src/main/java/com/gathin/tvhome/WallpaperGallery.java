@@ -8,6 +8,18 @@ import java.io.File;
 import java.util.*;
 
 final class WallpaperGallery {
+    static void fade(Context c, ImageView view, String id, boolean animate) {
+        android.graphics.drawable.Drawable previous = view.getDrawable();
+        show(c, view, id);
+        android.graphics.drawable.Drawable next = view.getDrawable();
+        if (!animate || previous == null) return;
+        android.graphics.drawable.TransitionDrawable transition = new android.graphics.drawable.TransitionDrawable(
+                new android.graphics.drawable.Drawable[]{previous, next});
+        transition.setCrossFadeEnabled(true);
+        view.setImageDrawable(transition);
+        transition.startTransition(900);
+        view.postDelayed(() -> { if (view.getDrawable() == transition) view.setImageDrawable(next); }, 950);
+    }
     static File folder(Context c) {
         File folder = new File(c.getFilesDir(), "wallpapers");
         folder.mkdirs();

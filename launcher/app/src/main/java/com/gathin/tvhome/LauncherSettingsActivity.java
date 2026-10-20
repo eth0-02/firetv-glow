@@ -72,6 +72,7 @@ public final class LauncherSettingsActivity extends Activity {
         row("Favorites  ·  add, remove and reorder", this::favorites);
         row("Wallpaper gallery", this::gallery);
         row("Appearance", this::appearance);
+        row("Personal screensaver", this::screensaver);
         row("Connection test", () -> NetworkCheck.show(this));
         row("Backup and restore", this::backups);
         row("Fire TV settings", () -> {
@@ -109,6 +110,20 @@ public final class LauncherSettingsActivity extends Activity {
             }).show();
         });
         row("Back", this::home);
+    }
+    private void screensaver() {
+        screen("Personal screensaver");
+        int delay = GlowPrefs.number(this,"idle_minutes",5,0,30);
+        note("Dim gallery pictures and a drifting clock. Any remote key returns you home. The Home timer pauses while another app is open.");
+        row("Start after  ·  " + (delay == 0 ? "Off" : delay + " minutes on Home"), () -> {
+            String[] labels = {"Off", "3 minutes", "5 minutes", "10 minutes", "20 minutes"};
+            int[] values = {0,3,5,10,20};
+            new AlertDialog.Builder(this).setTitle("Screensaver delay").setItems(labels,(d,which) -> {
+                GlowPrefs.get(this).edit().putInt("idle_minutes",values[which]).apply(); changed(); screensaver();
+            }).show();
+        });
+        row("Preview screensaver", () -> startActivity(new Intent(this,GalleryScreensaverActivity.class)));
+        row("Back",this::home);
     }
     private void saveFavorites(List<String> apps) {
         GlowPrefs.get(this).edit().putString("favorites", new JSONArray(apps).toString()).apply(); changed();

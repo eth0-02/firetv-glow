@@ -43,6 +43,7 @@ final class GlowPrefs {
         data.put("clean_home", p.getBoolean("clean_home", true));
         data.put("rotate", p.getBoolean("rotate", false));
         data.put("wallpaper", p.getString("wallpaper", "porsche"));
+        data.put("idle_minutes", p.getInt("idle_minutes", 5));
         return data;
     }
     static void restore(Context c, String text) throws Exception {
@@ -59,8 +60,11 @@ final class GlowPrefs {
         int offset = bounded(data, "wall_offset", -20, 10);
         int dim = bounded(data, "dim_percent", 0, 60);
         boolean clean = data.getBoolean("clean_home"), rotate = data.getBoolean("rotate");
+        int idle = data.optInt("idle_minutes", 5);
+        if (idle < 0 || idle > 30) throw new IllegalArgumentException("Invalid screensaver delay");
         get(c).edit().putString("favorites", new JSONArray(apps).toString())
                 .putInt("icon_percent", size).putInt("clock_sp", clock)
+                .putInt("idle_minutes", idle)
                 .putInt("wall_offset", offset).putInt("dim_percent", dim)
                 .putBoolean("clean_home", clean).putBoolean("rotate", rotate)
                 .putString("wallpaper", wallpaper).putLong("rotation_start", android.os.SystemClock.elapsedRealtime())

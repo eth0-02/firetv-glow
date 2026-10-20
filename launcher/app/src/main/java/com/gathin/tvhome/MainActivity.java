@@ -183,6 +183,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     };
     private android.widget.ImageView galleryWall;
     private String visibleWallpaper = "";
+    private boolean homeResumed;
+    private final Runnable idleSaver = () -> {
+        if (homeResumed && hasWindowFocus()) startActivity(new Intent(this, GalleryScreensaverActivity.class));
+        else if (homeResumed) resetIdleSaver();
+    };
+    private void resetIdleSaver() {
+        handler.removeCallbacks(idleSaver);
+        int minutes = GlowPrefs.number(this, "idle_minutes", 5, 0, 30);
+        // Let Home's gallery timer win over Fire OS's competing idle dream timer.
+        if (minutes > 0) getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        else getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (homeResumed && minutes > 0) handler.postDelayed(idleSaver, minutes * 60000L);
+    }
+    @Override public void onUserInteraction() { super.onUserInteraction(); resetIdleSaver(); }
     private final Runnable galleryTick = new Runnable() {
         @Override public void run() {
             refreshWallpaper();
@@ -197,7 +211,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (galleryWall == null) return;
         String selected = WallpaperGallery.current(this);
         if (!selected.equals(visibleWallpaper)) {
-            WallpaperGallery.show(this, galleryWall, selected);
+            WallpaperGallery.fade(this, galleryWall, selected, !visibleWallpaper.isEmpty() && animations);
             visibleWallpaper = selected;
         }
     }
@@ -384,12 +398,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         };
         btnInputs.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
+        btnWifi.setOnFocusChangeListener((v, focused) -> updateWifiLabel());
         btnSettings.setOnKeyListener(pillKeys);
         if (advancedEffects) {
             for (View button : new View[]{btnInputs, btnWifi, btnSettings}) {
-                button.setOnFocusChangeListener((view, focused) -> view.animate()
-                        .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
-                        .setDuration(160).start());
+                button.setOnFocusChangeListener((view, focused) -> {
+                    view.animate().scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
+                            .setDuration(160).start();
+                    if (view == btnWifi) updateWifiLabel();
+                });
             }
         }
 
@@ -470,6 +487,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onResume() {
         super.onResume();
+        homeResumed = true;
+        resetIdleSaver();
         promptsPaused = false;
         if (rebuildOnResume) {
             tilesReady = false;
@@ -490,6 +509,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             grid.postDelayed(() -> {
                 if (!isFinishing() && !isDestroyed() && lastFocused < COLUMNS) {
                     grid.scrollBy(0, -getResources().getDisplayMetrics().heightPixels * 100);
+                    grid.post(() -> {
+                        RecyclerView.ViewHolder focused = grid.findViewHolderForAdapterPosition(lastFocused);
+                        if (focused != null && focused.itemView.findViewById(R.id.card).hasFocus()) {
+                            glassShown = false;
+                            glassScrollShift = 0;
+                            onTileFocused(lastFocused, focused.itemView.findViewById(R.id.card));
+                        }
+                    });
                     android.util.Log.d("TvHome.Layout", "Home reset: padding=" + grid.getPaddingTop()
                             + ", firstTop=" + (grid.getChildCount() > 0 ? grid.getChildAt(0).getTop() : -1));
                 }
@@ -572,6 +599,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onPause() {
         super.onPause();
+        homeResumed = false;
+        handler.removeCallbacks(idleSaver);
         stopAmbientAnimation();
         heroName.animate().cancel();
         ambient.animate().cancel();
@@ -614,13 +643,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     // ---- glass highlight -------------------------------------------------------------------------
 
+    @Override public void onTileLongPressed(String pkg, String label) {
+        TileMenu.show(this, pkg, label, () -> { lastFocused = 0; lastFocusedKey = null; recreate(); });
+    }
+
     @Override
     public void onTileFocused(int position, View card) {
         lastFocused = position;
         lastFocusedKey = adapter.keyAt(position);
-        if (position < COLUMNS && GlowPrefs.get(this).getBoolean("clean_home", true)) {
-            ((GridLayoutManager) grid.getLayoutManager()).scrollToPositionWithOffset(0, 0);
-        }
         // Tile rect in root coordinates, using layout positions (ignores the scale animation).
         Rect r = new Rect(0, 0, card.getWidth(), card.getHeight());
         root.offsetDescendantRectToMyCoords(card, r);
@@ -931,6 +961,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // With a VPN app configured, a VPN that is down matters too: show a red "VPN off" capsule then.
         String connectionStatus = NetworkCheck.status(this);
         if (!connectionStatus.equals("Connected")) text = connectionStatus;
+        else if (!btnWifi.hasFocus()) text = "";
+        btnWifi.setContentDescription(connectionStatus.equals("Connected") ? "Network connection test" : connectionStatus);
+        if (!connectionStatus.equals("Connected") && !btnWifi.hasFocus()) btnWifi.setTextColor(0xFFFFC27A);
+        else btnWifi.setTextColor(getResources().getColorStateList(R.drawable.pill_text, getTheme()));
         boolean vpnDown = !vpn && online && !vpnApp.isEmpty();
         if (vpn || vpnDown) {
             // Network name, then the green lock-and-VPN (or red "VPN off") capsule drawn in place of the word.

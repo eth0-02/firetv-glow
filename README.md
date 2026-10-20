@@ -2,19 +2,21 @@
 
 **A quieter Fire TV. A better home.**
 
-A customized native Android TV launcher with a compact five-app dock, a photographic backdrop, smooth remote focus, and a small, reversible Fire TV debloat script.
+A customized native Android TV launcher with a customizable app dock, a photographic backdrop, smooth remote focus, and a small, reversible Fire TV debloat script.
 
 Built on [Gathin23/tv-vibehack](https://github.com/Gathin23/tv-vibehack). The original package ID, `com.gathin.tvhome`, is retained for compatibility.
 
 ## The home screen
 
-- Five customizable favorites in a compact dock.
-- Compact tiles, translucent charcoal dock, and a clear focus highlight.
+- One to seven customizable favorites in a compact dock.
+- Consistent charcoal tiles with matched logo sizes, spacing, and a clear focus highlight.
+- Hold OK on a tile to move it, replace it, or open its app settings.
 - Porsche wallpaper positioned above the dock; no app-colored background switching.
-- Clock, date, Wi-Fi, settings, and input shortcuts.
+- Smaller top-bar controls; Wi-Fi name appears on focus, while connection warnings stay visible.
 - More installed apps available below the favorites using the remote.
 - Remote-editable favorites: add, remove, and reorder 1–7 apps.
-- Local wallpaper gallery with previews, picture import, ten-minute rotation, and pinning.
+- Local wallpaper gallery with previews, picture import, ten-minute rotation, gentle crossfades, and pinning.
+- Personal screensaver with gallery pictures and a dim, drifting clock after Home inactivity.
 - Appearance controls for icon size, clock size, wallpaper position, and dimming.
 - Clean home mode hides the lower row until Down is pressed.
 - Connection diagnostics distinguish disconnected Wi-Fi, DNS failure, and failed secure web access.
@@ -65,7 +67,7 @@ The script does not change DNS, accessibility settings, Amazon's launcher, Appst
 
 ## Customize
 
-Edit `launcher/app/src/main/res/values/config.xml` to change the dock's package IDs and column count, then rebuild. The bundled wallpaper is `launcher/app/src/main/res/drawable-nodpi/porsche_wallpaper.png`; its upward offset is in `MainActivity.java`. A scenic alternative is included as `scenic_wallpaper.png`.
+The public configuration uses generic `com.example.*` placeholders. Edit `launcher/app/src/main/res/values/config.xml` to set your own dock package IDs and column count, then rebuild. You can also choose installed apps through Home settings. The bundled wallpaper is `launcher/app/src/main/res/drawable-nodpi/porsche_wallpaper.png`; its upward offset is in `MainActivity.java`. A scenic alternative is included as `scenic_wallpaper.png`.
 
 Open **Settings** on the home screen for these controls. Fire TV system settings remain available inside Home settings. Select the Wi-Fi pill for a connection test; hold OK on it to open Wi-Fi settings.
 
@@ -82,11 +84,13 @@ Photo and layout import/export use Android's document picker when available. Som
 
 After importing a layout with the helper, choose **Restore saved layout** on the TV. Backups include favorites and appearance settings, not image files or installed apps. A missing imported wallpaper falls back to the built-in picture. A malformed backup is rejected before any setting is changed. The companion scripts require the debug build's `run-as` access.
 
+The personal screensaver defaults to five idle minutes on Home. Choose Off, 3, 5, 10, or 20 minutes under **Personal screensaver**, or preview it immediately. Any remote key dismisses it. Its timer pauses in other apps. On the tested Fire OS build, Amazon overrides custom system dreams, so the launcher uses its own Home-only idle screen and leaves the system Ambient component enabled.
+
 The optional connection test performs DNS resolution and an HTTPS request to `example.com`. No analytics or recurring network requests are added.
 
 ## Validation and limits
 
-Built and tested on an Amazon AFTKRT running Fire OS 8 / Android 11. Version 3.0 passes 55 JVM tests. On-device checks cover backup round trips, rejecting malformed backups without partial changes, favorite ordering/count, gallery rotation and pinning. The remote editor, image preview/import helper, appearance changes, local backup controls, and successful DNS/HTTPS diagnostic were also exercised on the TV. Physical Home redirection and video playback were verified during initial setup. This is not a guarantee of compatibility with every Fire TV.
+Built and tested on an Amazon AFTKRT running Fire OS 8 / Android 11. Version 3.1 passes 55 JVM tests. On-device checks cover backup round trips, rejecting malformed backups without partial changes, favorite ordering/count, gallery rotation and pinning, crossfade creation, and older backup compatibility. The remote editor, image preview/import helper, appearance changes, local backup controls, and successful DNS/HTTPS diagnostic were also exercised on the TV. Physical Home redirection and video playback were verified during initial setup. This is not a guarantee of compatibility with every Fire TV.
 
 To run the device checks (they restore the original preferences afterward):
 

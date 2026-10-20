@@ -9,11 +9,11 @@
 
     <!-- Apps pinned to the dock row at the bottom, in this order. Missing apps are skipped. -->
     <string-array name="dock_apps">
-        <item>org.smarttube.stable</item>
-        <item>com.arvio.tv</item>
-        <item>io.gh.reisxd.tizentube.cobalt</item>
-        <item>org.clipbox.player</item>
-        <item>studio.scillarium.ottnavigator</item>
+        <item>com.example.video</item>
+        <item>com.example.media</item>
+        <item>com.example.player</item>
+        <item>com.example.library</item>
+        <item>com.example.television</item>
     </string-array>
 
     <!-- Apps never shown as tiles (e.g. the Live TV app, which the Inputs menu already covers). -->
