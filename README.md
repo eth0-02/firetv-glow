@@ -8,7 +8,7 @@ Built on [Gathin23/tv-vibehack](https://github.com/Gathin23/tv-vibehack). The or
 
 ## The home screen
 
-- Five favorites: SmartTube, ARVIO, TizenTube, ClipBox, and OTT Navigator.
+- Five customizable favorites in a compact dock.
 - Compact tiles, translucent charcoal dock, and a clear focus highlight.
 - Porsche wallpaper positioned above the dock; no app-colored background switching.
 - Clock, date, Wi-Fi, settings, and input shortcuts.
@@ -65,7 +65,7 @@ The current wallpaper is static. Reddit wallpaper retrieval was blocked during s
 
 ## Validation and limits
 
-Built and tested on an Amazon AFTKRT running Fire OS 8 / Android 11. The customized launcher passed 51 included unit tests; its five-app layout was checked on-device. Physical Home redirection and SmartTube playback were also verified during setup. This is not a guarantee of compatibility with every Fire TV.
+Built and tested on an Amazon AFTKRT running Fire OS 8 / Android 11. The customized launcher passed 51 included unit tests; its five-app layout was checked on-device. Physical Home redirection and video playback were also verified during setup. This is not a guarantee of compatibility with every Fire TV.
 
 After setup, disable ADB debugging when it is no longer needed. Disconnecting the client alone does not turn off the TV's ADB listener.
 
