@@ -35,6 +35,10 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
             outRect.top = (int) (6 * density);
             outRect.bottom = (int) (12 * density);
         }
+        if (pos >= dockSize && pos < dockSize * 2
+                && GlowPrefs.get(parent.getContext()).getBoolean("clean_home", true)) {
+            outRect.top = (int) (90 * density);
+        }
     }
 
     @Override

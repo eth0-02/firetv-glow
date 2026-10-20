@@ -181,12 +181,33 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             reloadApps(false);
         }
     };
+    private android.widget.ImageView galleryWall;
+    private String visibleWallpaper = "";
+    private final Runnable galleryTick = new Runnable() {
+        @Override public void run() {
+            refreshWallpaper();
+            if (GlowPrefs.get(MainActivity.this).getBoolean("rotate", false)) {
+                long start = GlowPrefs.get(MainActivity.this).getLong("rotation_start", android.os.SystemClock.elapsedRealtime());
+                long elapsed = Math.max(0, android.os.SystemClock.elapsedRealtime() - start);
+                handler.postDelayed(this, GlowRules.ROTATION_MS - elapsed % GlowRules.ROTATION_MS);
+            }
+        }
+    };
+    private void refreshWallpaper() {
+        if (galleryWall == null) return;
+        String selected = WallpaperGallery.current(this);
+        if (!selected.equals(visibleWallpaper)) {
+            WallpaperGallery.show(this, galleryWall, selected);
+            visibleWallpaper = selected;
+        }
+    }
     private final Runnable minuteTick = new Runnable() {
         @Override
         public void run() {
             updateGreeting();
             updateWifiLabel();
             sky.update();
+            refreshWallpaper();
             handler.postDelayed(this, MINUTE_MS);
         }
     };
@@ -210,18 +231,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         root = findViewById(R.id.root);
         root.setBackgroundColor(cfg.backgroundColor);
-        if (cfg.wallpaper != null) {
+        if (cfg.wallpaper != null && !GlowPrefs.get(this).contains("wallpaper")) {
             showWallpaper(cfg.wallpaper);
         } else {
             android.widget.ImageView wall = new android.widget.ImageView(this);
             wall.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-            wall.setImageResource(R.drawable.porsche_wallpaper);
+            galleryWall = wall;
+            refreshWallpaper();
             // Lift the car clear of the dock; the dark root fills the space below.
             wall.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) ->
-                    wall.setTranslationY(-(b - t) * 0.10f));
+                    wall.setTranslationY((b - t) * GlowPrefs.number(this, "wall_offset", -10, -20, 10) / 100f));
             root.addView(wall, 0, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
+        View dimmer = new View(this);
+        dimmer.setBackgroundColor(android.graphics.Color.BLACK);
+        dimmer.setAlpha(GlowPrefs.number(this, "dim_percent", 0, 0, 60) / 100f);
+        root.addView(dimmer, 1, new FrameLayout.LayoutParams(-1, -1));
+        ((android.widget.TextClock) findViewById(R.id.clock)).setTextSize(
+                GlowPrefs.number(this, "clock_sp", 42, 30, 54));
         sky = findViewById(R.id.sky);
         sky.setIntensity(0);
         glass = findViewById(R.id.glass);
@@ -247,6 +275,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         hiddenApps = new HashSet<>(cfg.hiddenApps);
 
         grid = findViewById(R.id.grid);
+        grid.setSaveEnabled(false);
         rtlAppGrid = getResources().getBoolean(R.bool.rtl_app_grid);
         // Mirror only the app grid; the header and other locales keep their own layouts.
         grid.setLayoutManager(new GridLayoutManager(this, COLUMNS) {
@@ -274,12 +303,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int h = b - t;
             // Item height follows the tile size, which follows the column count (AppAdapter.tileWidthPx).
             int inner = (r - l) - grid.getPaddingLeft() - grid.getPaddingRight();
-            int itemH = AppAdapter.itemHeightPx(AppAdapter.tileHeightPx(AppAdapter.tileWidthPx(inner, COLUMNS, density)), density);
+            int itemH = AppAdapter.itemHeightPx(AppAdapter.tileHeightPx(AppAdapter.sizedTileWidth(this, inner, COLUMNS, density)), density);
             int dockRow = itemH + (int) ((6 + 12) * density);   // item height plus DockDecoration offsets
             int gridRows = itemH * rowsBelowDock;
             int want = Math.max(0, h - dockRow - gridRows - (int) (30 * density));
             if (grid.getPaddingTop() != want) {
                 grid.setPadding(grid.getPaddingLeft(), want, grid.getPaddingRight(), grid.getPaddingBottom());
+                if (lastFocused < COLUMNS)
+                    ((GridLayoutManager) grid.getLayoutManager()).scrollToPositionWithOffset(0, 0);
             }
         });
 
@@ -327,7 +358,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             open(systemIntent(Settings.ACTION_WIFI_SETTINGS));
             return true;
         });
-        btnSettings.setOnClickListener(v -> open(systemIntent(Settings.ACTION_SETTINGS)));
+        btnSettings.setOnClickListener(v -> startActivityForResult(
+                new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
         btnSettings.setOnLongClickListener(v -> {
             showSettingsMenu();
             return true;
@@ -448,13 +480,31 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         updateWifiLabel();
         updateInputsButton();
         sky.update();
+        refreshWallpaper();
+        handler.removeCallbacks(galleryTick);
+        galleryTick.run();
         handler.postDelayed(minuteTick, MINUTE_MS);
+        if (lastFocused < COLUMNS) {
+            // Recreated RecyclerViews can apply a late anchor after their padding changes.
+            // Reset after that layout pass so Home always shows the bottom dock.
+            grid.postDelayed(() -> {
+                if (!isFinishing() && !isDestroyed() && lastFocused < COLUMNS) {
+                    grid.scrollBy(0, -getResources().getDisplayMetrics().heightPixels * 100);
+                    android.util.Log.d("TvHome.Layout", "Home reset: padding=" + grid.getPaddingTop()
+                            + ", firstTop=" + (grid.getChildCount() > 0 ? grid.getChildAt(0).getTop() : -1));
+                }
+            }, 150);
+        }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == LAUNCHER_SETTINGS_REQUEST && resultCode == RESULT_OK) recreate();
+        if (requestCode == LAUNCHER_SETTINGS_REQUEST && resultCode == RESULT_OK) {
+            lastFocused = 0;
+            lastFocusedKey = null;
+            recreate();
+        }
     }
 
     /** Rebuilds the tiles (and the module cards), then puts focus back where it was. */
@@ -526,6 +576,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         heroName.animate().cancel();
         ambient.animate().cancel();
         handler.removeCallbacks(minuteTick);
+        handler.removeCallbacks(galleryTick);
         // Nothing of ours stays on screen over another app; an undecided prompt simply returns next time.
         if (cardPrompt != null) cardPrompt.dismiss();
         if (openPopup != null) openPopup.dismiss();
@@ -567,6 +618,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     public void onTileFocused(int position, View card) {
         lastFocused = position;
         lastFocusedKey = adapter.keyAt(position);
+        if (position < COLUMNS && GlowPrefs.get(this).getBoolean("clean_home", true)) {
+            ((GridLayoutManager) grid.getLayoutManager()).scrollToPositionWithOffset(0, 0);
+        }
         // Tile rect in root coordinates, using layout positions (ignores the scale animation).
         Rect r = new Rect(0, 0, card.getWidth(), card.getHeight());
         root.offsetDescendantRectToMyCoords(card, r);
@@ -875,6 +929,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         } catch (Exception ignored) {
         }
         // With a VPN app configured, a VPN that is down matters too: show a red "VPN off" capsule then.
+        String connectionStatus = NetworkCheck.status(this);
+        if (!connectionStatus.equals("Connected")) text = connectionStatus;
         boolean vpnDown = !vpn && online && !vpnApp.isEmpty();
         if (vpn || vpnDown) {
             // Network name, then the green lock-and-VPN (or red "VPN off") capsule drawn in place of the word.
@@ -898,9 +954,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** The network pill opens the VPN app when one is configured and installed, otherwise Wi-Fi settings. */
     private void openNetworkPill() {
-        Intent i = vpnApp.isEmpty() ? null : getPackageManager().getLeanbackLaunchIntentForPackage(vpnApp);
-        if (i == null && !vpnApp.isEmpty()) i = getPackageManager().getLaunchIntentForPackage(vpnApp);
-        open(i != null ? i : systemIntent(Settings.ACTION_WIFI_SETTINGS));
+        NetworkCheck.show(this);
     }
 
 

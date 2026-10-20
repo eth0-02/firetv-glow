@@ -103,6 +103,13 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         return Math.round(tileWidthPx * DESIGN_H_DP / DESIGN_W_DP);
     }
 
+    static int sizedTileWidth(Context context, int inner, int columns, float density) {
+        int percent = GlowPrefs.number(context, "icon_percent", 100, 70, 110);
+        int desired = Math.round(DESIGN_W_DP * density * percent / 100f);
+        int fit = (int) ((inner / Math.max(1, columns) - 12 * density) / FOCUS_SCALE);
+        return Math.max(Math.round(50 * density), Math.min(desired, fit));
+    }
+
     /** Height of one grid item: the tile, the name label under it and the item's own padding. */
     static int itemHeightPx(int tileHeightPx, float density) {
         return tileHeightPx + Math.round(45 * density);
@@ -211,7 +218,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.Holder> {
         float density = parent.getResources().getDisplayMetrics().density;
         int width = parent.getWidth() > 0 ? parent.getWidth() : parent.getMeasuredWidth();
         int inner = width - parent.getPaddingLeft() - parent.getPaddingRight();
-        int w = tileWidthPx(inner, dockSize, density), h = tileHeightPx(w);
+        int w = sizedTileWidth(ctx, inner, dockSize, density), h = tileHeightPx(w);
         View card = v.findViewById(R.id.card);
         ViewGroup.LayoutParams cardLp = card.getLayoutParams();
         cardLp.width = w;

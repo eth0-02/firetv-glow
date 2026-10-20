@@ -148,6 +148,13 @@ final class Config {
         if (chosenColumns >= 4 && chosenColumns <= 7) columns = chosenColumns;
         animations = choices.getBoolean("animations", animations);
         advancedEffects = choices.getBoolean("advanced_effects", advancedEffects);
+        String favorites = GlowPrefs.get(ctx).getString("favorites", null);
+        if (favorites != null) {
+            try {
+                dock = GlowPrefs.parseFavorites(favorites);
+                columns = dock.size();
+            } catch (IllegalArgumentException ignored) { }
+        }
         File wallpaper = dir != null ? new File(dir, WALLPAPER_NAME) : null;
         if (wallpaper != null && !(wallpaper.isFile() && wallpaper.length() > 0)) wallpaper = null;
         // A theme can also switch the wallpaper off while the file is still there.
