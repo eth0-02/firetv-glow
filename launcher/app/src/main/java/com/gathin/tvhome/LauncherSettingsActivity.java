@@ -76,9 +76,9 @@ public final class LauncherSettingsActivity extends Activity {
         row("Connection test", () -> NetworkCheck.show(this));
         row("Backup and restore", this::backups);
         row("Fire TV settings", () -> {
-            Intent intent = new Intent(Settings.ACTION_SETTINGS);
-            intent.setPackage("com.amazon.tv.settings.v2");
-            if (intent.resolveActivity(getPackageManager()) == null) intent.setPackage(null);
+            Intent intent = new Intent().setComponent(new ComponentName(
+                    "com.amazon.tv.launcher", "com.amazon.tv.launcher.ui.MainSettingsActivity"));
+            if (intent.resolveActivity(getPackageManager()) == null) intent = new Intent(Settings.ACTION_SETTINGS);
             launch(intent, 0);
         });
         row("Return home", this::finish);

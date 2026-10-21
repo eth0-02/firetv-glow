@@ -390,11 +390,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 focusTile(lastFocused % COLUMNS);
                 return true;
             }
-            int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : R.id.btnWifi;
-            int leftButton = rtlMenuBar ? R.id.btnSettings : firstButton;
-            int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
-            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
-            return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                boolean forward = (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) != rtlMenuBar;
+                if (v == btnInputs && forward) btnWifi.requestFocus();
+                else if (v == btnWifi) {
+                    if (forward) btnSettings.requestFocus();
+                    else if (btnInputs.getVisibility() == View.VISIBLE) btnInputs.requestFocus();
+                } else if (v == btnSettings && !forward) btnWifi.requestFocus();
+                return true;
+            }
+            return false;
         };
         btnInputs.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
@@ -859,7 +864,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     rtlAppGrid, keyCode == KeyEvent.KEYCODE_DPAD_LEFT);
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-            if (position < COLUMNS) return false;          // dock row: let focus move to the top bar
+            if (position < COLUMNS) {
+                findViewById(R.id.btnSettings).requestFocus();
+                return true;
+            }
             target = position - COLUMNS;
         } else {
             int lastRowStart = ((count - 1) / COLUMNS) * COLUMNS;
@@ -998,6 +1006,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * On firmware with a standard settings handler the behaviour is unchanged.
      */
     private Intent systemIntent(String standardAction) {
+        if (Settings.ACTION_SETTINGS.equals(standardAction)) {
+            Intent fire = new Intent().setComponent(new ComponentName(
+                    "com.amazon.tv.launcher", "com.amazon.tv.launcher.ui.MainSettingsActivity"));
+            if (fire.resolveActivity(getPackageManager()) != null) return fire;
+        }
         Intent i = new Intent(standardAction);
         if (i.resolveActivity(getPackageManager()) != null) return i;
         i = new Intent().setComponent(new ComponentName(

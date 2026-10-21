@@ -9,9 +9,10 @@ Built on [Gathin23/tv-vibehack](https://github.com/Gathin23/tv-vibehack). The or
 ## The home screen
 
 - One to seven customizable favorites in a compact dock.
-- Consistent charcoal tiles with matched logo sizes, spacing, and a clear focus highlight.
+- Original app banner artwork in rounded tiles, with consistent spacing and a clear focus highlight.
 - Hold OK on a tile to move it, replace it, or open its app settings.
 - Porsche wallpaper positioned above the dock; no app-colored background switching.
+- Press Up from the dock to focus Settings; use Left/Right across the top controls.
 - Smaller top-bar controls; Wi-Fi name appears on focus, while connection warnings stay visible.
 - More installed apps available below the favorites using the remote.
 - Remote-editable favorites: add, remove, and reorder 1–7 apps.
@@ -90,7 +91,7 @@ The optional connection test performs DNS resolution and an HTTPS request to `ex
 
 ## Validation and limits
 
-Built and tested on an Amazon AFTKRT running Fire OS 8 / Android 11. Version 3.1 passes 55 JVM tests. On-device checks cover backup round trips, rejecting malformed backups without partial changes, favorite ordering/count, gallery rotation and pinning, crossfade creation, and older backup compatibility. The remote editor, image preview/import helper, appearance changes, local backup controls, and successful DNS/HTTPS diagnostic were also exercised on the TV. Physical Home redirection and video playback were verified during initial setup. This is not a guarantee of compatibility with every Fire TV.
+Built and tested on an Amazon AFTKRT running Fire OS 8 / Android 11. Version 3.2 passes 55 JVM tests. On-device checks cover backup round trips, rejecting malformed backups without partial changes, favorite ordering/count, gallery rotation and pinning, crossfade creation, and older backup compatibility. The remote editor, image preview/import helper, appearance changes, local backup controls, and successful DNS/HTTPS diagnostic were also exercised on the TV. Physical Home redirection and video playback were verified during initial setup. This is not a guarantee of compatibility with every Fire TV.
 
 To run the device checks (they restore the original preferences afterward):
 
